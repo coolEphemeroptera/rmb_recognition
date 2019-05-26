@@ -37,7 +37,7 @@ def show(img):
     cv2.waitKey(0)
 
 # 定义VGG_16
-def VGG_16(x,reuse=False,drop_rate=0.2):
+def VGG_16(x,drop_rate,reuse=False):
 
     with tf.variable_scope('VGG_16', reuse=reuse):
         # block1
@@ -89,11 +89,11 @@ def VGG_16(x,reuse=False,drop_rate=0.2):
         # FC6
         flat = flatten(pool5)
         FC6 = tf.layers.dense(flat,2048,activation=tf.nn.relu,kernel_initializer=tf.variance_scaling_initializer,name='FC6')
-        DP6 = tf.nn.dropout(FC6,rate=drop_rate)
+        DP6 = tf.nn.dropout(FC6,rate=drop_rate,name='DP6')
 
         # FC7
         FC7 = tf.layers.dense(DP6, 1024, activation=tf.nn.relu, kernel_initializer=tf.variance_scaling_initializer,name='FC7')
-        DP7 = tf.nn.dropout(FC7, rate=drop_rate)
+        DP7 = tf.nn.dropout(FC7, rate=drop_rate,name='DP7')
 
         # FC8
         logits = tf.layers.dense(DP7, 9,  kernel_initializer=tf.variance_scaling_initializer,name='logits')
@@ -105,17 +105,18 @@ GEN_DIR()
 # 定义输入
 x = tf.placeholder(tf.float32, [None, 128, 256, 3], 'x')
 y_ = tf.placeholder(name="y_", shape=[None, 9], dtype=tf.float32)
+drop_rate = tf.placeholder(dtype=tf.float32,name='drop_rate')
 STEP = tf.Variable(0, trainable=False)
 
 # 定义损失函数
 # 计算交叉熵
-cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=y_,logits=VGG_16(x),name='cross_entropy')
+cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=y_,logits=VGG_16(x,drop_rate),name='cross_entropy')
 
 # 梯度下降
 train_step = tf.train.AdamOptimizer(0.0001).minimize(cross_entropy,global_step=STEP)  # 使用adam优化器来以0.0001的学习率来进行微调
 
 # 准确率测试
-correct_prediction = tf.equal(tf.argmax(VGG_16(x,reuse=True,drop_rate=0.0), 1), tf.argmax(y_, 1))
+correct_prediction = tf.equal(tf.argmax(VGG_16(x,drop_rate,True), 1), tf.argmax(y_, 1))
 accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32),name='accuracy')
 
 # --------------------------------------------- 滑动平均 ---------------------------------------------------------- #

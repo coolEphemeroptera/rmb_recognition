@@ -3,6 +3,7 @@ import csv
 import cv2
 import numpy as np
 import random
+import shutil
 import tfr_tools as tfr
 
 def show(img):
@@ -24,7 +25,8 @@ def onehot(label):
 
 def saving_tfr(file_list,data_dir,tfr_path,N=10):
     # 获取N组区间下标
-    index = [int(i) for i in np.linspace(0, train_total, N+1)]
+    data_total = len(file_list)
+    index = [int(i) for i in np.linspace(0, data_total, N+1)]
     # 遍历每组
     for i in range(N):
         datas = []
@@ -47,12 +49,24 @@ def saving_tfr(file_list,data_dir,tfr_path,N=10):
         # 保存tfr
         tfr.Saving_Batch_TFR(tfr_path, idxs,datas, labels, i, N-1)
 
+def copy_into_other_dir(src_dir,dst_dir,file_list):
+    # 清除目标文件夹
+    dst_list = os.listdir(dst_dir)
+    for dst_file in dst_list:
+        os.remove(os.path.join(dst_dir,dst_file))
+        print('正在删除文件%s..'%dst_file)
+    # 拷贝
+    for file in file_list:
+        shutil.copy(os.path.join(src_dir,file),os.path.join(dst_dir,file))
+        print('正在拷贝文件%s'%file)
+
 label_dict = {' 0.1':0,' 0.2':1,' 0.5':2,' 1':3,' 2':4,' 5':5,' 10':6,' 50':7,' 100':8}
 
 if __name__ == '__main__':
 
     # 设置数据路径
     data_dir = r'../rmb_data/train_data'
+    test_dir = r'../rmb_data/test_data'
     csv_path = r'../rmb_data/train_face_value_label.csv'
 
     # 数据集列表
@@ -68,5 +82,5 @@ if __name__ == '__main__':
     # 保存训练集
     saving_tfr(train_list,data_dir,r'./train_tfr/rmb',10)
 
-    # 保存测试集
-    saving_tfr(test_list, data_dir, r'./test_tfr/rmb', 5)
+    # 拷贝测试图片
+    copy_into_other_dir(data_dir,test_dir,test_list)
