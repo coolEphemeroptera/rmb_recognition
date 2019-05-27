@@ -124,7 +124,7 @@ accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32),name='accuracy
 vars = [var for var in tf.trainable_variables()]
 saving_into_collection('RAWS',vars)
 # 使用EMA
-EMA = tf.train.ExponentialMovingAverage(decay=0.99,num_updates=STEP)
+EMA = tf.train.ExponentialMovingAverage(decay=0.999,num_updates=STEP)
 ema_op = EMA.apply(vars) # apply ema
 # 保存影子
 shadows = [EMA.average(var) for var in vars]
@@ -133,7 +133,7 @@ saving_into_collection('SHADOWS',shadows)
 with tf.control_dependencies([train_step,ema_op]):
     train_opt_ema = tf.no_op(name='train_opt_ema')
 # 保存模型
-saver = tf.train.Saver(var_list = vars+shadows)
+saver = tf.train.Saver(var_list = vars + shadows)
 
 # --------------------------------------------- 迭代 ---------------------------------------------------------#
 epochs = 20
@@ -162,6 +162,7 @@ with tf.Session() as sess:
     ACC = []
     LOST = []
     for steps in range(max_iters):
+
 
         # 读取数据集
         [idxs, datas, labels] = sess.run([idx_batch, data_batch, label_batch])

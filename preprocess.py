@@ -6,6 +6,8 @@ import random
 import shutil
 import tfr_tools as tfr
 
+label_dict = {' 0.1':0,' 0.2':1,' 0.5':2,' 1':3,' 2':4,' 5':5,' 10':6,' 50':7,' 100':8}
+
 def show(img):
     cv2.namedWindow(' ',cv2.WINDOW_NORMAL)
     cv2.imshow(' ',img)
@@ -59,7 +61,6 @@ def copy_into_other_dir(src_dir,dst_dir,file_list):
         shutil.copy(os.path.join(src_dir,file),os.path.join(dst_dir,file))
         print('正在拷贝文件%s'%file)
 
-label_dict = {' 0.1':0,' 0.2':1,' 0.5':2,' 1':3,' 2':4,' 5':5,' 10':6,' 50':7,' 100':8}
 
 if __name__ == '__main__':
 
