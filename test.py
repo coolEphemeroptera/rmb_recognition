@@ -45,15 +45,21 @@ with tf.Session() as sess:
 
     scores = []
     for test in test_list:
+        # 读取图片
         rmb = cv2.imread(os.path.join(test_dir,test))
         rmb = (rmb/255).reshape([-1,128,256,3]).astype(np.float32)
+        # 获取结果
         logit = sess.run(logits,feed_dict={x:rmb,drop_rate:0.0})
         index = np.argmax(logit)
+        # 比较
         y_ = pp.Reading_Label_CSV(csv_path,test)
         score = np.equal(index,y_)
         scores.append(score)
         print('图片%s识别结果：%s'%(test,score))
 
+    scores = np.array(scores)
+    acc = np.sum(scores)/scores.size
+    print('全部图片识别率为%.2f'%acc)
 
 
 

@@ -11,7 +11,6 @@ def show(img):
     cv2.imshow(' ',img)
     cv2.waitKey(0)
 
-
 def Reading_Label_CSV(csv_path,id):
     csv_file = csv.reader(open(csv_path, 'r'))
     for line in csv_file:

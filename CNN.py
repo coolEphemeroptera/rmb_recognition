@@ -136,13 +136,13 @@ with tf.control_dependencies([train_step,ema_op]):
 saver = tf.train.Saver(var_list = vars+shadows)
 
 # --------------------------------------------- 迭代 ---------------------------------------------------------#
-epochs = 100
+epochs = 20
 batch_size = 64
-data_size = 39620
+data_size = int(39620*0.7)
 max_iters = int(data_size*epochs/batch_size)
 
 # 读取单个tfr
-[idx,data,label] = tfr.Reading_TFR(r'./tfr/rmb-*',isShuffle=False,datatype=tf.uint8,labeltype=tf.float64)
+[idx,data,label] = tfr.Reading_TFR(r'./train_tfr/rmb-*',isShuffle=False,datatype=tf.uint8,labeltype=tf.float64)
 
 # 读取成批tfr
 [idx_batch,data_batch,label_batch] = tfr.Reading_Batch_TFR(idx,data,label,isShuffle=False,batchSize=batch_size,data_size=128*256*3,
@@ -175,14 +175,14 @@ with tf.Session() as sess:
 
         # 测试和训练
         if steps%5==0:
-            acc = sess.run(accuracy,feed_dict={x:datas,y_:labels})
+            acc = sess.run(accuracy,feed_dict={x:datas,y_:labels,drop_rate:0.0})
             ACC.append([steps,acc])
             print('iters:%d/%d..acc:%.2f'%(steps,max_iters,acc))
         else:
-            sess.run(train_opt_ema,feed_dict={x:datas,y_:labels})
+            sess.run(train_opt_ema,feed_dict={x:datas,y_:labels,drop_rate:0.2})
 
         # 保存损失函数
-        lost = sess.run(cross_entropy,feed_dict={x:datas,y_:labels})
+        lost = sess.run(cross_entropy,feed_dict={x:datas,y_:labels,drop_rate:0.2})
         LOST.append([steps,lost])
 
         # 保存模型
