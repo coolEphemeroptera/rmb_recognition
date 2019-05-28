@@ -36,6 +36,63 @@ def show(img):
     cv2.imshow(' ', img)
     cv2.waitKey(0)
 
+# 定义VGG_11
+def VGG_11(x,drop_rate,reuse=False):
+    with tf.variable_scope('VGG_11', reuse=reuse):
+        # block1
+        with tf.name_scope('block_1'):
+            conv1_1 = tf.layers.conv2d(x, 32, 3, padding='same', activation=tf.nn.relu,
+                                       kernel_initializer=tf.variance_scaling_initializer, name='conv1_1')
+            pool1 = tf.layers.max_pooling2d(conv1_1, 2, 2)
+
+        # block2
+        with tf.name_scope('block_2'):
+            conv2_1 = tf.layers.conv2d(pool1, 32, 3, padding='same', activation=tf.nn.relu,
+                                       kernel_initializer=tf.variance_scaling_initializer, name='conv2_1')
+            pool2 = tf.layers.max_pooling2d(conv2_1, 2, 2)
+
+        # block3
+        with tf.name_scope('block_3'):
+            conv3_1 = tf.layers.conv2d(pool2, 64, 3, padding='same', activation=tf.nn.relu,
+                                       kernel_initializer=tf.variance_scaling_initializer, name='conv3_1')
+            conv3_2 = tf.layers.conv2d(conv3_1, 64, 3, padding='same', activation=tf.nn.relu,
+                                       kernel_initializer=tf.variance_scaling_initializer, name='conv3_2')
+            pool3 = tf.layers.max_pooling2d(conv3_2, 2, 2)
+
+        # block4
+        with tf.name_scope('block_4'):
+            conv4_1 = tf.layers.conv2d(pool3, 128, 3, padding='same', activation=tf.nn.relu,
+                                       kernel_initializer=tf.variance_scaling_initializer, name='conv4_1')
+            conv4_2 = tf.layers.conv2d(conv4_1, 128, 3, padding='same', activation=tf.nn.relu,
+                                       kernel_initializer=tf.variance_scaling_initializer, name='conv4_2')
+            pool4 = tf.layers.max_pooling2d(conv4_2, 2, 2)
+
+        # block5
+        with tf.name_scope('block_5'):
+            conv5_1 = tf.layers.conv2d(pool4, 128, 3, padding='same', activation=tf.nn.relu,
+                                       kernel_initializer=tf.variance_scaling_initializer, name='conv5_1')
+            conv5_2 = tf.layers.conv2d(conv5_1, 128, 3, padding='same', activation=tf.nn.relu,
+                                       kernel_initializer=tf.variance_scaling_initializer, name='conv5_2')
+            pool5 = tf.layers.max_pooling2d(conv5_2, 2, 2)
+
+        # FC6
+        flat = flatten(pool5)
+        FC6 = tf.layers.dense(flat, 512, activation=tf.nn.relu, kernel_initializer=tf.variance_scaling_initializer,
+                              name='FC6')
+        DP6 = tf.nn.dropout(FC6, rate=drop_rate, name='DP6')
+
+        # FC7
+        # FC7 = tf.layers.dense(DP6, 512, activation=tf.nn.relu, kernel_initializer=tf.variance_scaling_initializer,
+        #                       name='FC7')
+        # DP7 = tf.nn.dropout(FC7, rate=drop_rate, name='DP7')
+
+        # logits
+        logits = tf.layers.dense(DP6, 9, kernel_initializer=tf.variance_scaling_initializer, name='logits')
+
+        return logits
+
+
+
 # 定义VGG_16
 def VGG_16(x,drop_rate,reuse=False):
 
@@ -110,14 +167,14 @@ STEP = tf.Variable(0, trainable=False)
 
 # 定义损失函数
 # 计算交叉熵
-cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=y_,logits=VGG_16(x,drop_rate),name='cross_entropy')
+cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=y_,logits=VGG_11(x,drop_rate),name='cross_entropy')
 cross_entropy_mean = tf.reduce_mean(cross_entropy)
 
 # 梯度下降
-train_step = tf.train.AdamOptimizer(0.0001).minimize(cross_entropy_mean,global_step=STEP)  # 使用adam优化器来以0.0001的学习率来进行微调
+train_step = tf.train.AdamOptimizer(0.00005).minimize(cross_entropy_mean,global_step=STEP)  # 使用adam优化器来以0.0001的学习率来进行微调
 
 # 准确率测试
-correct_prediction = tf.equal(tf.argmax(VGG_16(x,drop_rate,True), 1), tf.argmax(y_, 1))
+correct_prediction = tf.equal(tf.argmax(VGG_11(x,drop_rate,True), 1), tf.argmax(y_, 1))
 accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32),name='accuracy')
 
 # --------------------------------------------- 滑动平均 ---------------------------------------------------------- #
@@ -137,8 +194,8 @@ with tf.control_dependencies([train_step,ema_op]):
 saver = tf.train.Saver(var_list = vars + shadows)
 
 # --------------------------------------------- 迭代 ---------------------------------------------------------#
-epochs = 20
-batch_size = 64
+epochs = 10
+batch_size = 96
 data_size = int(39620*0.7)
 max_iters = int(data_size*epochs/batch_size)
 
@@ -175,17 +232,19 @@ with tf.Session() as sess:
         #     print(lb)
         #     imshow(img)
 
+        # 保存损失函数
+        lost = sess.run(cross_entropy_mean, feed_dict={x: datas, y_: labels, drop_rate: 0.1})
+        LOST.append([steps, lost])
+
         # 测试和训练
         if steps%5==0:
             acc = sess.run(accuracy,feed_dict={x:datas,y_:labels,drop_rate:0.0})
             ACC.append([steps,acc])
-            print('iters:%d/%d..acc:%.2f'%(steps,max_iters,acc))
+            print('iters:%d/%d..acc:%.2f..loss:%.2f'%(steps,max_iters,acc,lost))
         else:
-            sess.run(train_opt_ema,feed_dict={x:datas,y_:labels,drop_rate:0.2})
+            sess.run(train_opt_ema,feed_dict={x:datas,y_:labels,drop_rate:0.1})
 
-        # 保存损失函数
-        lost = sess.run(cross_entropy_mean,feed_dict={x:datas,y_:labels,drop_rate:0.2})
-        LOST.append([steps,lost])
+
 
         # 保存模型
         if steps % 500 == 0 and steps > 0:

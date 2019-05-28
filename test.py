@@ -5,7 +5,7 @@ import cv2
 import preprocess as pp
 label_dict = {' 0.1':0,' 0.2':1,' 0.5':2,' 1':3,' 2':4,' 5':5,' 10':6,' 50':7,' 100':8}
 
-meta_path = r'./ckpt/CNN.ckpt-8500.meta'
+meta_path = r'./ckpt/CNN.ckpt-4000.meta'
 
 # 加载模型
 meta_graph = tf.train.import_meta_graph(meta_path)
@@ -16,7 +16,7 @@ graph = tf.get_default_graph()
 # 获取相关张量
 x = graph.get_tensor_by_name("x:0")
 drop_rate = graph.get_tensor_by_name("drop_rate:0")
-logits = graph.get_tensor_by_name("VGG_16/logits/BiasAdd:0")
+logits = graph.get_tensor_by_name("VGG_11/logits/BiasAdd:0")
 
 # 获取集合RAWS,SHADOWS
 RAWS = tf.get_collection('RAWS')
