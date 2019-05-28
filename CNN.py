@@ -111,9 +111,10 @@ STEP = tf.Variable(0, trainable=False)
 # 定义损失函数
 # 计算交叉熵
 cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=y_,logits=VGG_16(x,drop_rate),name='cross_entropy')
+cross_entropy_mean = tf.reduce_mean(cross_entropy)
 
 # 梯度下降
-train_step = tf.train.AdamOptimizer(0.0001).minimize(cross_entropy,global_step=STEP)  # 使用adam优化器来以0.0001的学习率来进行微调
+train_step = tf.train.AdamOptimizer(0.0001).minimize(cross_entropy_mean,global_step=STEP)  # 使用adam优化器来以0.0001的学习率来进行微调
 
 # 准确率测试
 correct_prediction = tf.equal(tf.argmax(VGG_16(x,drop_rate,True), 1), tf.argmax(y_, 1))
@@ -183,18 +184,18 @@ with tf.Session() as sess:
             sess.run(train_opt_ema,feed_dict={x:datas,y_:labels,drop_rate:0.2})
 
         # 保存损失函数
-        lost = sess.run(cross_entropy,feed_dict={x:datas,y_:labels,drop_rate:0.2})
+        lost = sess.run(cross_entropy_mean,feed_dict={x:datas,y_:labels,drop_rate:0.2})
         LOST.append([steps,lost])
 
         # 保存模型
         if steps % 500 == 0 and steps > 0:
             saver.save(sess, './ckpt/CNN.ckpt', global_step=steps)
 
-    # 保存
-    Saving_Train_Log('ACC', ACC)
-    Saving_Train_Log('LOST', LOST)
-
-
     # 关闭线程
     coord.request_stop()
     coord.join(threads)
+
+# 保存
+Saving_Train_Log('ACC', ACC)
+Saving_Train_Log('LOST', LOST)
+

@@ -1,10 +1,12 @@
 import numpy as np
 import tensorflow as tf
 import os
+import csv
 import cv2
-import preprocess as pp
-label_dict = {' 0.1':0,' 0.2':1,' 0.5':2,' 1':3,' 2':4,' 5':5,' 10':6,' 50':7,' 100':8}
 
+label_dict = {' 0.1':0,' 0.2':1,' 0.5':2,' 1':3,' 2':4,' 5':5,' 10':6,' 50':7,' 100':8}
+label_to_value = {'0':' 0.1','1':' 0.2','2':' 0.5','3':' 2','4':' 3','5':' 5','6':' 10',
+                  '7':' 50','8':' 100'}
 meta_path = r'./ckpt/CNN.ckpt-8500.meta'
 
 # 加载模型
@@ -25,6 +27,10 @@ SHADOWS = tf.get_collection('SHADOWS')
 # 提取影子
 assop = [tf.assign(var1, var2) for var1, var2 in zip(RAWS, SHADOWS)]
 
+# 写入csv
+result = open(r'./result.csv','w',newline='')
+writer = csv.writer(result)
+writer.writerow(['name','label'])
 
 with tf.Session() as sess:
     # init
@@ -38,11 +44,9 @@ with tf.Session() as sess:
     # 使用ema
     sess.run(assop)
 
-    test_dir = r'../rmb_data/test_data'
+    test_dir = r'../rmb_data/public_test_data'
     test_list = os.listdir(test_dir)
-    csv_path = r'../rmb_data/train_face_value_label.csv'
 
-    scores = []
     for test in test_list:
         # 读取图片
         rmb = cv2.imread(os.path.join(test_dir,test))
@@ -51,19 +55,9 @@ with tf.Session() as sess:
         # 获取结果
         logit = sess.run(logits,feed_dict={x:rmb,drop_rate:0.0})
         index = int(np.argmax(logit,1))
+        value = label_to_value[str(index)]
+        # 写入csv
+        writer.writerow([test,value])
+        print('人民币：%s的面值为：%s'%(test,value))
 
-        # 比较
-        y_ = pp.Reading_Label_CSV(csv_path,test)
-        y_ = label_dict[y_]
-        score = np.equal(index,y_)
-        scores.append(score)
-        print('图片%s识别结果：%s'%(test,score))
-
-    scores = np.array(scores)
-    acc = np.sum(scores)/scores.size
-    print('全部图片识别率为%.2f'%acc)
-
-
-
-
-
+    result.close()
